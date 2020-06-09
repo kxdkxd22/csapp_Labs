@@ -1,0 +1,50 @@
+
+# Excutionn begins at address 0
+        .pos 0
+        irmovq stack,%rsp
+        call main
+        halt
+# Source block
+        .align 8
+        src:
+                .quad 0x00a
+                .quad 0x0b0
+                .quad 0xc00
+
+# Destination block
+        dest:
+                .quad 0x111
+                .quad 0x222
+		.quad 0x333
+
+# long sum
+# # src in %r8, dest in %r9, len in %r10 
+        main:
+                irmovq src,%r8
+		irmovq dest,%r9
+		irmovq $0x3,%r10
+		irmovq $0x8,%rsi
+		irmovq $0x1,%r11
+                call copy
+                ret
+
+        copy:
+                xorq %rax,%rax
+                jmp test   
+        loop: 
+                mrmovq (%r8),%rdi
+             	rmmovq %rdi,(%r9)
+		addq %rsi,%r9
+		addq %rsi,%r8
+		xorq %rdi,%rax
+		subq %r11,%r10
+        test: 
+                andq %r10,%r10
+                jne loop
+                ret
+
+# Stack starts here and grows to lower addresses
+                .pos 0x200
+stack:
+
+

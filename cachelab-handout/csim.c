@@ -1,0 +1,129 @@
+#include "cachelab.h"
+#include <string.h>
+#include <strings.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <getopt.h>
+#include <unistd.h>
+char buffer[100];
+char filename[100];
+int hit,miss,eviction;
+
+void update(int index,unsigned int tab,char * buffer,int E,int * valid,long *tagtab,int *recenttime,int count){
+	int len=strlen(buffer);
+	buffer[len-1]=0;	
+	for(int i = index*E;i<(index+1)*E;i++)
+	  {
+   		if(valid[i]==1&&tagtab[i]==tab){
+			recenttime[i]=count;
+			hit++;
+			printf("%s",buffer);	
+			printf(" hit");
+			return;
+ 		}
+	  }
+
+	for(int i = index*E;i<(index+1)*E;i++)
+	  {
+		if(!valid[i]){
+			miss++;
+			printf("%s",buffer);
+			printf(" miss ");
+			valid[i]=1;
+			tagtab[i]=tab;
+			recenttime[i]=count;
+			return;
+		}	
+
+ 	  }
+	int flag = 0;
+	int maxn = 1e9;
+	for(int i =index*E;i<(index+1)*E;i++)
+    	  {
+		if(recenttime[i]<maxn)
+			{
+				maxn=recenttime[i];
+				flag=i;
+			}
+		}
+	miss++;
+	eviction++;
+	valid[flag]=1;
+	tagtab[flag]=tab;
+	recenttime[flag]=count;
+	printf("%s",buffer);
+	printf(" miss eviction ");
+	return;
+
+}
+
+
+int main(int argc,char* argv[])
+{
+    
+    int c,s,S,E,b;
+    while ((c = getopt(argc,argv,"hvs:E:b:t:"))!=-1){
+        switch(c){
+          case 's':
+                s = atoi(optarg);
+                break;
+          case 'E':
+                E = atoi(optarg);
+                break;
+          case 'b':
+                b = atoi(optarg);
+                break;
+          case 't':
+                strcpy(filename,optarg);
+                break;
+                }
+
+        }
+
+    S = 1 << s;
+    int * valid = (int *)malloc(sizeof(int)*E*S);
+    long * tagtab = (long *)malloc(sizeof(long)*E*S);
+    int * recenttime = (int *)malloc(sizeof(int)*E*S);
+    FILE * fp = fopen(filename,"r");
+    for(int i=0;i<E*S;i++){
+      valid[i]=0;
+      tagtab[i]=0;
+      recenttime[i]=0;
+     }
+    int count = 0;
+    unsigned int address;
+    int temp;
+    char type;
+    hit=0;
+    miss=0;
+    eviction=0; 
+    while(fgets(buffer,100,fp)){
+      sscanf(buffer," %c %xu,%d", &type, &address, &temp);
+      int offset = 0;
+      int indexgroup = 0;
+      count++;
+      for(int i=0;i<b;i++)
+	{
+	  offset = offset*2+(address&1);
+          address = address >> 1;	  
+	}
+      for(int i=0;i<s;i++){
+	  indexgroup = indexgroup*2+(address&1);
+	  address = address >> 1;
+	}
+      if (type=='L'||type=='S'){     
+       	update(indexgroup,address,buffer,E,valid,tagtab,recenttime,count);
+	printf("\n");
+	}
+      if(type=='M'){
+ 	update(indexgroup,address,buffer,E,valid,tagtab,recenttime,count);
+       	printf("hit\n");
+	hit++;
+	}
+      
+      
+     }
+    fclose(fp);    
+    printSummary(hit, miss, eviction);
+    return 0;
+}
